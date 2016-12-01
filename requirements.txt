@@ -1,4 +1,7 @@
+click
 twisted == 12.2.*
 ldaptor
 six
 pbr
+PyYAML
+dogpile.cache

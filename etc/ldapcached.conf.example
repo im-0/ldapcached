@@ -1,0 +1,15 @@
+upstream: 'tcp:localhost:389:timeout=15'
+upstream_use_tls: False
+
+listen_port: 10389
+
+cache_conf:
+    common:
+        backend: dogpile.cache.memory
+
+    regions:
+        test_region_name_1:
+            templates:
+                -
+                    filter: 're:(?i)^\(email=.*\)$'
+            expiration_time: 600

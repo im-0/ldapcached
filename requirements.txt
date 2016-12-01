@@ -1,0 +1,4 @@
+twisted == 12.2.*
+ldaptor
+six
+pbr

@@ -1,0 +1,14 @@
+[Unit]
+Description=LDAP caching daemon
+After=network.service
+
+[Install]
+RequiredBy=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ldapcached --log-level INFO --log-file /var/log/ldapcached/ldapcached.log --conf-file /etc/ldapcached/ldapcached.conf
+StandardOutput=journal
+StandardError=journal
+User=ldapcached
+Group=ldapcached

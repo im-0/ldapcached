@@ -21,12 +21,58 @@ class LDAPProxy(ldaptor.protocols.ldap.proxybase.ProxyBase):
         self._cache = cache
 
         self._search_result_acc = list()
+        self._deferred_bind_request = None
+
+    def _send_deferred_bind(self):
+        if self._deferred_bind_request is None:
+            return
+
+        deferred_bind = self.client.send(self._deferred_bind_request)
+        self._deferred_bind_request = None
+
+        def _check_bind_result(result):
+            if not isinstance(
+                    result, ldaptor.protocols.pureldap.LDAPBindResponse):
+                raise RuntimeError('Invalid response after bind request')
+            if result.resultCode == 0:
+                _log.debug('Successfull bind: %r', result)
+            else:
+                raise RuntimeError('Bind error: %r' % (result, ))
+
+        def _bind_error(failure):
+            raise RuntimeError('Bind failure: %r' % (failure, ))
+
+        deferred_bind.addCallback(_check_bind_result)
+        deferred_bind.addErrback(_bind_error)
 
     def handleBeforeForwardRequest(self, request, controls, reply):
         _log.debug('Request (before forward): %r', request)
         _log.debug('Controls (before forward): %r', controls)
 
-        if isinstance(request, ldaptor.protocols.pureldap.LDAPSearchRequest):
+        if isinstance(request, ldaptor.protocols.pureldap.LDAPBindRequest):
+            if self._deferred_bind_request is not None:
+                raise RuntimeError('Already bind')
+
+            if request.dn or request.auth:
+                # Do not defer bind requests with authentication.
+                return twisted.internet.defer.succeed((request, controls))
+
+            self._deferred_bind_request = request
+
+            reply(ldaptor.protocols.pureldap.LDAPBindResponse(0))
+            return None
+        elif isinstance(request, ldaptor.protocols.pureldap.LDAPUnbindRequest):
+            if self._deferred_bind_request is None:
+                # There was no deferred bind.
+                _log.info('Cache MISS: bind/unbind')
+                return twisted.internet.defer.succeed((request, controls))
+
+            self._deferred_bind_request = None
+
+            _log.info('Cache HIT: bind/unbind avoided')
+
+            return None
+        elif isinstance(request, ldaptor.protocols.pureldap.LDAPSearchRequest):
             cached = self._cache.get_search(request, controls)
             if cached is not None:
                 result_entries, result_done = cached
@@ -35,6 +81,7 @@ class LDAPProxy(ldaptor.protocols.ldap.proxybase.ProxyBase):
                 reply(result_done)
                 return None
 
+        self._send_deferred_bind()
         return twisted.internet.defer.succeed((request, controls))
 
     def handleProxiedResponse(self, response, request, controls):

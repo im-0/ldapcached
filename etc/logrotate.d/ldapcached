@@ -1,0 +1,8 @@
+/var/log/ldapcached/*.log {
+    daily
+    missingok
+    rotate 31
+    compress
+    delaycompress
+    copytruncate
+}

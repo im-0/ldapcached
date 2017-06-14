@@ -27,6 +27,7 @@ class LDAPProxy(ldaptor.protocols.ldap.proxybase.ProxyBase):
         if self._deferred_bind_request is None:
             return
 
+        _log.info('Cache MISS (bind/unbind): %r', self._deferred_bind_request)
         deferred_bind = self.client.send(self._deferred_bind_request)
         self._deferred_bind_request = None
 

@@ -55,6 +55,7 @@ class LDAPProxy(ldaptor.protocols.ldap.proxybase.ProxyBase):
 
             if request.dn or request.auth:
                 # Do not defer bind requests with authentication.
+                _log.info('Cache MISS (bind/unbind): %r', request)
                 return twisted.internet.defer.succeed((request, controls))
 
             self._deferred_bind_request = request
@@ -64,12 +65,11 @@ class LDAPProxy(ldaptor.protocols.ldap.proxybase.ProxyBase):
         elif isinstance(request, ldaptor.protocols.pureldap.LDAPUnbindRequest):
             if self._deferred_bind_request is None:
                 # There was no deferred bind.
-                _log.info('Cache MISS: bind/unbind')
                 return twisted.internet.defer.succeed((request, controls))
 
+            _log.info('Cache HIT (bind/unbind): %r',
+                      self._deferred_bind_request)
             self._deferred_bind_request = None
-
-            _log.info('Cache HIT: bind/unbind avoided')
 
             return None
         elif isinstance(request, ldaptor.protocols.pureldap.LDAPSearchRequest):

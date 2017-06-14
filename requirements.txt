@@ -1,7 +1,8 @@
 click
-twisted == 12.2.*
+twisted
 ldaptor
 six
 pbr
 PyYAML
 dogpile.cache
+service_identity
